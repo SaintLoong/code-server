@@ -10,12 +10,40 @@ main() {
   hub release create \
     --file - \
     -t "$(git rev-parse HEAD)" \
-    --draft "${assets[@]}" "v$VERSION" << EOF
+    --draft "v$VERSION" <<EOF
 v$VERSION
 
 VS Code v$(vscode_version)
 
-- Summarize changes here with references to issues
+Upgrading is as easy as installing the new version over the old one. code-server
+maintains all user data in \`~/.local/share/code-server\` so that it is preserved in between
+installations.
+
+## New Features
+
+⭐ Summarize new features here with references to issues
+
+  - item
+
+## Bug Fixes
+
+⭐ Summarize bug fixes here with references to issues
+
+  - item
+
+## Documentation
+
+⭐ Summarize doc changes here with references to issues
+
+  - item
+
+## Development
+
+⭐ Summarize development/testing changes here with references to issues
+
+  - item
+
+Cheers! 🍻
 EOF
 }
 

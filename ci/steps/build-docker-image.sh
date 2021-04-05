@@ -5,10 +5,10 @@ main() {
   cd "$(dirname "$0")/../.."
   source ./ci/lib.sh
 
-  ./ci/release-container/build.sh
+  ./ci/release-image/build.sh
 
   mkdir -p release-images
-  docker save "codercom/code-server-$ARCH:$VERSION" > "release-images/code-server-$ARCH-$VERSION.tar"
+  docker save "codercom/code-server-$ARCH:$VERSION" >"release-images/code-server-$ARCH-$VERSION.tar"
 }
 
 main "$@"

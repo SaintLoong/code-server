@@ -1,10 +1,10 @@
-import * as fs from "fs-extra"
+import { promises as fs } from "fs"
 import * as net from "net"
 import * as path from "path"
 import * as tls from "tls"
 import { Emitter } from "../common/emitter"
 import { generateUuid } from "../common/util"
-import { tmpdir } from "./util"
+import { canConnect, tmpdir } from "./util"
 
 /**
  * Provides a way to proxy a TLS socket. Can be used when you need to pass a
@@ -75,7 +75,7 @@ export class SocketProxyProvider {
       this._proxyServer = this.findFreeSocketPath(this.proxyPipe)
         .then((pipe) => {
           this.proxyPipe = pipe
-          return Promise.all([fs.mkdirp(tmpdir), fs.remove(this.proxyPipe)])
+          return Promise.all([fs.mkdir(tmpdir, { recursive: true }), fs.rmdir(this.proxyPipe, { recursive: true })])
         })
         .then(() => {
           return new Promise((resolve) => {
@@ -89,17 +89,6 @@ export class SocketProxyProvider {
   }
 
   public async findFreeSocketPath(basePath: string, maxTries = 100): Promise<string> {
-    const canConnect = (path: string): Promise<boolean> => {
-      return new Promise((resolve) => {
-        const socket = net.connect(path)
-        socket.once("error", () => resolve(false))
-        socket.once("connect", () => {
-          socket.destroy()
-          resolve(true)
-        })
-      })
-    }
-
     let i = 0
     let path = basePath
     while ((await canConnect(path)) && i < maxTries) {

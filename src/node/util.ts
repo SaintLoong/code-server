@@ -1,10 +1,11 @@
 import * as cp from "child_process"
 import * as crypto from "crypto"
-import * as fs from "fs-extra"
+import envPaths from "env-paths"
+import { promises as fs } from "fs"
+import * as net from "net"
 import * as os from "os"
 import * as path from "path"
 import * as util from "util"
-import envPaths from "env-paths"
 import xdgBasedir from "xdg-basedir"
 
 export const tmpdir = path.join(os.tmpdir(), "code-server")
@@ -53,25 +54,49 @@ export function humanPath(p?: string): string {
   return p.replace(os.homedir(), "~")
 }
 
-export const generateCertificate = async (): Promise<{ cert: string; certKey: string }> => {
-  const paths = {
-    cert: path.join(tmpdir, "self-signed.cert"),
-    certKey: path.join(tmpdir, "self-signed.key"),
-  }
-  const checks = await Promise.all([fs.pathExists(paths.cert), fs.pathExists(paths.certKey)])
-  if (!checks[0] || !checks[1]) {
+export const generateCertificate = async (hostname: string): Promise<{ cert: string; certKey: string }> => {
+  const certPath = path.join(paths.data, `${hostname.replace(/\./g, "_")}.crt`)
+  const certKeyPath = path.join(paths.data, `${hostname.replace(/\./g, "_")}.key`)
+
+  // Try generating the certificates if we can't access them (which probably
+  // means they don't exist).
+  try {
+    await Promise.all([fs.access(certPath), fs.access(certKeyPath)])
+  } catch (error) {
     // Require on demand so openssl isn't required if you aren't going to
     // generate certificates.
     const pem = require("pem") as typeof import("pem")
     const certs = await new Promise<import("pem").CertificateCreationResult>((resolve, reject): void => {
-      pem.createCertificate({ selfSigned: true }, (error, result) => {
-        return error ? reject(error) : resolve(result)
-      })
+      pem.createCertificate(
+        {
+          selfSigned: true,
+          commonName: hostname,
+          config: `
+[req]
+req_extensions = v3_req
+
+[ v3_req ]
+basicConstraints = CA:true
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${hostname}
+`,
+        },
+        (error, result) => {
+          return error ? reject(error) : resolve(result)
+        },
+      )
     })
-    await fs.mkdirp(tmpdir)
-    await Promise.all([fs.writeFile(paths.cert, certs.certificate), fs.writeFile(paths.certKey, certs.serviceKey)])
+    await fs.mkdir(paths.data, { recursive: true })
+    await Promise.all([fs.writeFile(certPath, certs.certificate), fs.writeFile(certKeyPath, certs.serviceKey)])
   }
-  return paths
+
+  return {
+    cert: certPath,
+    certKey: certKeyPath,
+  }
 }
 
 export const generatePassword = async (length = 24): Promise<string> => {
@@ -166,7 +191,7 @@ export const open = async (url: string): Promise<void> => {
     url = url.replace(/&/g, "^&")
   }
   const proc = cp.spawn(command, [...args, url], options)
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     proc.on("error", reject)
     proc.on("close", (code) => {
       return code !== 0 ? reject(new Error(`Failed to open with code ${code}`)) : resolve()
@@ -197,25 +222,6 @@ export const buildAllowedMessage = (t: any): string => {
 
 export const isObject = <T extends object>(obj: T): obj is T => {
   return !Array.isArray(obj) && typeof obj === "object" && obj !== null
-}
-
-/**
- * Extend a with b and return a new object. Properties with objects will be
- * recursively merged while all other properties are just overwritten.
- */
-export function extend<A, B>(a: A, b: B): A & B
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extend(...args: any[]): any {
-  const c = {} as any // eslint-disable-line @typescript-eslint/no-explicit-any
-  for (const obj of args) {
-    if (!isObject(obj)) {
-      continue
-    }
-    for (const key in obj) {
-      c[key] = isObject(obj[key]) ? extend(c[key], obj[key]) : obj[key]
-    }
-  }
-  return c
 }
 
 /**
@@ -264,4 +270,27 @@ export function pathToFsPath(path: string, keepDriveLetterCasing = false): strin
     value = value.replace(/\//g, "\\")
   }
   return value
+}
+
+/**
+ * Return a promise that resolves with whether the socket path is active.
+ */
+export function canConnect(path: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect(path)
+    socket.once("error", () => resolve(false))
+    socket.once("connect", () => {
+      socket.destroy()
+      resolve(true)
+    })
+  })
+}
+
+export const isFile = async (path: string): Promise<boolean> => {
+  try {
+    const stat = await fs.stat(path)
+    return stat.isFile()
+  } catch (error) {
+    return false
+  }
 }

@@ -1,125 +1,77 @@
-# code-server
+# code-server &middot; [!["GitHub Discussions"](https://img.shields.io/badge/%20GitHub-%20Discussions-gray.svg?longCache=true&logo=github&colorB=purple)](https://github.com/cdr/code-server/discussions) [!["Join us on Slack"](https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=brightgreen)](https://cdr.co/join-community) [![Twitter Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=social)](https://twitter.com/coderhq)
+
+![Lines](https://img.shields.io/badge/Coverage-51.55%25-red.svg)
+[![See latest docs](https://img.shields.io/static/v1?label=Docs&message=see%20latest%20&color=blue)](https://github.com/cdr/code-server/tree/v3.9.2/docs)
 
 Run [VS Code](https://github.com/Microsoft/vscode) on any machine anywhere and access it in the browser.
 
-- **Code everywhere:** Code on your Chromebook, tablet, and laptop with a
-  consistent dev environment. Develop on a Linux machine and pick up from any
-  device with a web browser.
-- **Server-powered:** Take advantage of large cloud servers to speed up tests, compilations, downloads, and more.
-  Preserve battery life when you're on the go since all intensive tasks runs on your server.
-  Make use of a spare computer you have lying around and turn it into a full development environment.
+![Screenshot](./docs/assets/screenshot.png)
 
-![Example gif](./doc/assets/code-server.gif)
+## Highlights
+
+- Code on any device with a consistent development environment
+- Use cloud servers to speed up tests, compilations, downloads, and more
+- Preserve battery life when you're on the go; all intensive tasks run on your server
+
+## Requirements
+
+For a good experience, we recommend at least:
+
+- 1 GB of RAM
+- 2 cores
+
+You can use whatever linux distribution floats your boat but in our [guide](./docs/guide.md) we assume Debian on Google Cloud.
 
 ## Getting Started
 
-For a full setup and walkthrough, please see [./doc/guide.md](./doc/guide.md).
+There are three ways you can get started:
 
-### Debian, Ubuntu
+1. Using the [install script](./install.sh), which automates most of the process. The script uses the system package manager (if possible)
+2. Manually installing code-server; see [Installation](./docs/install.md) for instructions applicable to most use cases
+3. Use our one-click buttons and guides to [deploy code-server to a popular cloud provider](https://github.com/cdr/deploy-code-server) ⚡
+
+If you choose to use the install script, you can preview what occurs during the install process:
 
 ```bash
-curl -sSOL https://github.com/cdr/code-server/releases/download/v3.3.1/code-server_3.3.1_amd64.deb
-sudo dpkg -i code-server_3.3.1_amd64.deb
-systemctl --user enable --now code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
+curl -fsSL https://code-server.dev/install.sh | sh -s -- --dry-run
 ```
 
-### Fedora, Red Hat, SUSE
+To install, run:
 
 ```bash
-curl -sSOL https://github.com/cdr/code-server/releases/download/v3.3.1/code-server-3.3.1-amd64.rpm
-sudo yum install -y code-server-3.3.1-amd64.rpm
-systemctl --user enable --now code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
+curl -fsSL https://code-server.dev/install.sh | sh
 ```
 
-### Arch Linux
+When done, the install script prints out instructions for running and starting code-server.
+
+We also have an in-depth [setup and configuration](./docs/guide.md) guide.
+
+### code-server --link
+
+We're working on a cloud platform that makes deploying and managing code-server easier.
+Consider running code-server with the beta flag `--link` if you don't want to worry about
+
+- TLS
+- Authentication
+- Port Forwarding
 
 ```bash
-# Installs code-server from the AUR using yay.
-yay -S code-server
-systemctl --user enable --now code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
-```
-
-```bash
-# Installs code-server from the AUR with plain makepkg.
-git clone https://aur.archlinux.org/code-server.git
-cd code-server
-makepkg -si
-systemctl --user enable --now code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
-```
-
-### yarn, npm
-
-We recommend installing with `yarn` or `npm` if we don't have a precompiled release for your machine's
-platform or architecture or your glibc < v2.19.
-
-**note:** Installing via `yarn` or `npm` builds native modules on install and so requires C dependencies.
-See [./doc/npm.md](./doc/npm.md) for installing these dependencies.
-
-You will need at least node v12 installed. See [#1633](https://github.com/cdr/code-server/issues/1633).
-
-```bash
-yarn global add code-server
-# Or: npm install -g code-server
-code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
-```
-
-### macOS
-
-```bash
-brew install code-server
-brew services start code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
-```
-
-### Docker
-
-```bash
-# This will start a code-server container and expose it at http://127.0.0.1:8080.
-# It will also mount your current directory into the container as `/home/coder/project`
-# and forward your UID/GID so that all file system operations occur as your user outside
-# the container.
-docker run -it -p 127.0.0.1:8080:8080 \
-  -v "$PWD:/home/coder/project" \
-  -u "$(id -u):$(id -g)" \
-  codercom/code-server:latest
-```
-
-### Static Releases
-
-We publish self contained `.tar.gz` archives for every release on [github](https://github.com/cdr/code-server/releases).
-They bundle the node binary and node_modules.
-
-1. Download the latest release archive for your system from [github](https://github.com/cdr/code-server/releases).
-2. Unpack the release.
-3. You can run code-server by executing `./bin/code-server`.
-
-Add the code-server `bin` directory to your `$PATH` to easily execute `code-server` without the full path every time.
-
-Here is an example script for installing and using a static `code-server` release on Linux:
-
-```bash
-curl -sSL https://github.com/cdr/code-server/releases/download/v3.3.1/code-server-3.3.1-linux-amd64.tar.gz \
-  | sudo tar -C /usr/local -xz
-sudo mv /usr/local/code-server-3.3.1-linux-amd64 /usr/local/code-server-3.3.1
-PATH="/usr/local/code-server-3.3.1/bin:$PATH"
-code-server
-# Now visit http://127.0.0.1:8080. Your password is in ~/.config/code-server/config.yaml
+$ code-server --link
+Proxying code-server, you can access your IDE at https://valmar-jon.cdr.co
 ```
 
 ## FAQ
 
-See [./doc/FAQ.md](./doc/FAQ.md).
+See [./docs/FAQ.md](./docs/FAQ.md).
 
-## Contributing
+## Want to help?
 
-See [./doc/CONTRIBUTING.md](./doc/CONTRIBUTING.md).
+See [CONTRIBUTING](./docs/CONTRIBUTING.md) for details.
 
-## Enterprise
+## Hiring
 
-Visit [our website](https://coder.com) for more information about our
-enterprise offerings.
+Interested in [working at Coder](https://coder.com)? Check out [our open positions](https://jobs.lever.co/coder)!
+
+## For Organizations
+
+Visit [our website](https://coder.com) for more information about remote development for your organization or enterprise.
