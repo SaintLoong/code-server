@@ -1,7 +1,6 @@
 .tsbuildinfo
 .cache
-dist*
-out*
+/out*/
 release/
 release-npm-package/
 release-standalone/
@@ -16,5 +15,5 @@ node-*
 .home
 coverage
 **/.DS_Store
-test/e2e/videos
-test/e2e/screenshots
+# Failed e2e test videos are saved here
+test/test-results

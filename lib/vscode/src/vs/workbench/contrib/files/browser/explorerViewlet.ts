@@ -173,11 +173,11 @@ export class ExplorerViewPaneContainer extends ViewPaneContainer {
 	constructor(
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
-		@IStorageService protected storageService: IStorageService,
+		@IWorkspaceContextService contextService: IWorkspaceContextService,
+		@IStorageService storageService: IStorageService,
 		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IInstantiationService protected instantiationService: IInstantiationService,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IThemeService themeService: IThemeService,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -192,12 +192,12 @@ export class ExplorerViewPaneContainer extends ViewPaneContainer {
 		this._register(this.contextService.onDidChangeWorkspaceName(e => this.updateTitleArea()));
 	}
 
-	create(parent: HTMLElement): void {
+	override create(parent: HTMLElement): void {
 		super.create(parent);
 		parent.classList.add('explorer-viewlet');
 	}
 
-	protected createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): ViewPane {
+	protected override createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): ViewPane {
 		if (viewDescriptor.id === VIEW_ID) {
 			// Create a delegating editor service for the explorer to be able to delay the refresh in the opened
 			// editors view above. This is a workaround for being able to double click on a file to make it pinned
@@ -245,12 +245,12 @@ export class ExplorerViewPaneContainer extends ViewPaneContainer {
 		return <OpenEditorsView>this.getView(OpenEditorsView.ID);
 	}
 
-	public setVisible(visible: boolean): void {
+	public override setVisible(visible: boolean): void {
 		this.viewletVisibleContextKey.set(visible);
 		super.setVisible(visible);
 	}
 
-	focus(): void {
+	override focus(): void {
 		const explorerView = this.getView(VIEW_ID);
 		if (explorerView && this.panes.every(p => !p.isExpanded())) {
 			explorerView.setExpanded(true);
@@ -303,9 +303,15 @@ viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	order: 1
 });
 
+// NOTE@coder:
+// We use OpenFolderAction.ID instead of commandId
+// because for some reason, the command openFileFolder
+// does not work as expected and causes the "Open Folder"
+// command to not work
+// See: https://github.com/cdr/code-server/issues/3457
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	content: localize({ key: 'noFolderHelp', comment: ['Please do not translate the word "commmand", it is part of our internal syntax which must not change'] },
-		"You have not yet opened a folder.\n[Open Folder](command:{0})", commandId),
+		"You have not yet opened a folder.\n[Open Folder](command:{0})", OpenFolderAction.ID),
 	when: ContextKeyExpr.or(ContextKeyExpr.and(WorkbenchStateContext.notEqualsTo('workspace'), RemoteNameContext.isEqualTo('')), ContextKeyExpr.and(WorkbenchStateContext.notEqualsTo('workspace'), IsWebContext)),
 	group: ViewContentGroups.Open,
 	order: 1

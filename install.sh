@@ -2,7 +2,7 @@
 set -eu
 
 # code-server's automatic install script.
-# See https://github.com/cdr/code-server/blob/main/docs/install.md
+# See https://coder.com/docs/code-server/v3.10.2/install
 
 usage() {
   arg0="$0"
@@ -13,7 +13,7 @@ usage() {
 "
   fi
 
-  cath <<EOF
+  cath << EOF
 Installs code-server for Linux, macOS and FreeBSD.
 It tries to use the system package manager if possible.
 After successful installation it explains how to start using code-server.
@@ -58,7 +58,7 @@ Usage:
   - If Homebrew is not installed it will install the latest standalone release
     into ~/.local
 
-- For FreeBSD, it will install the npm package with yarn or npm.
+- For FreeBSD or Alpine, it will install the npm package with yarn or npm.
 
 - If ran on an architecture with no releases, it will install the
   npm package with yarn or npm.
@@ -67,7 +67,7 @@ Usage:
 
 It will cache all downloaded assets into ~/.cache/code-server
 
-More installation docs are at https://github.com/cdr/code-server/blob/main/docs/install.md
+More installation docs are at https://coder.com/docs/code-server/v3.10.2/install
 EOF
 }
 
@@ -81,7 +81,7 @@ echo_latest_version() {
 
 echo_npm_postinstall() {
   echoh
-  cath <<EOF
+  cath << EOF
 The npm package has been installed successfully!
 Please extend your path to use code-server:
   PATH="$NPM_BIN_DIR:\$PATH"
@@ -92,7 +92,7 @@ EOF
 
 echo_standalone_postinstall() {
   echoh
-  cath <<EOF
+  cath << EOF
 Standalone release has been installed into $STANDALONE_INSTALL_PREFIX/lib/code-server-$VERSION
 Please extend your path to use code-server:
   PATH="$STANDALONE_INSTALL_PREFIX/bin:\$PATH"
@@ -103,7 +103,7 @@ EOF
 
 echo_systemd_postinstall() {
   echoh
-  cath <<EOF
+  cath << EOF
 To have systemd start code-server now and restart on boot:
   sudo systemctl enable --now code-server@\$USER
 Or, if you don't want/need a background service you can run:
@@ -129,63 +129,63 @@ main() {
   ALL_FLAGS=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
-    -*)
-      ALL_FLAGS="${ALL_FLAGS} $1"
-      ;;
+      -*)
+        ALL_FLAGS="${ALL_FLAGS} $1"
+        ;;
     esac
 
     case "$1" in
-    --dry-run)
-      DRY_RUN=1
-      ;;
-    --method)
-      METHOD="$(parse_arg "$@")"
-      shift
-      ;;
-    --method=*)
-      METHOD="$(parse_arg "$@")"
-      ;;
-    --prefix)
-      STANDALONE_INSTALL_PREFIX="$(parse_arg "$@")"
-      shift
-      ;;
-    --prefix=*)
-      STANDALONE_INSTALL_PREFIX="$(parse_arg "$@")"
-      ;;
-    --version)
-      VERSION="$(parse_arg "$@")"
-      shift
-      ;;
-    --version=*)
-      VERSION="$(parse_arg "$@")"
-      ;;
-    --rsh)
-      RSH="$(parse_arg "$@")"
-      shift
-      ;;
-    --rsh=*)
-      RSH="$(parse_arg "$@")"
-      ;;
-    -h | --h | -help | --help)
-      usage
-      exit 0
-      ;;
-    --)
-      shift
-      # We remove the -- added above.
-      ALL_FLAGS="${ALL_FLAGS% --}"
-      RSH_ARGS="$*"
-      break
-      ;;
-    -*)
-      echoerr "Unknown flag $1"
-      echoerr "Run with --help to see usage."
-      exit 1
-      ;;
-    *)
-      RSH_ARGS="$*"
-      break
-      ;;
+      --dry-run)
+        DRY_RUN=1
+        ;;
+      --method)
+        METHOD="$(parse_arg "$@")"
+        shift
+        ;;
+      --method=*)
+        METHOD="$(parse_arg "$@")"
+        ;;
+      --prefix)
+        STANDALONE_INSTALL_PREFIX="$(parse_arg "$@")"
+        shift
+        ;;
+      --prefix=*)
+        STANDALONE_INSTALL_PREFIX="$(parse_arg "$@")"
+        ;;
+      --version)
+        VERSION="$(parse_arg "$@")"
+        shift
+        ;;
+      --version=*)
+        VERSION="$(parse_arg "$@")"
+        ;;
+      --rsh)
+        RSH="$(parse_arg "$@")"
+        shift
+        ;;
+      --rsh=*)
+        RSH="$(parse_arg "$@")"
+        ;;
+      -h | --h | -help | --help)
+        usage
+        exit 0
+        ;;
+      --)
+        shift
+        # We remove the -- added above.
+        ALL_FLAGS="${ALL_FLAGS% --}"
+        RSH_ARGS="$*"
+        break
+        ;;
+      -*)
+        echoerr "Unknown flag $1"
+        echoerr "Run with --help to see usage."
+        exit 1
+        ;;
+      *)
+        RSH_ARGS="$*"
+        break
+        ;;
     esac
 
     shift
@@ -238,6 +238,17 @@ main() {
     return
   fi
 
+  if [ "$OS" = "linux" ] && [ "$(distro)" = "alpine" ]; then
+    if [ "$METHOD" = standalone ]; then
+      echoerr "No precompiled releases available for alpine."
+      echoerr 'Please rerun without the "--method standalone" flag to install from npm.'
+      exit 1
+    fi
+    echoh "No precompiled releases available for alpine."
+    install_npm
+    return
+  fi
+
   CACHE_DIR="$(echo_cache_dir)"
 
   if [ "$METHOD" = standalone ]; then
@@ -246,54 +257,54 @@ main() {
   fi
 
   case "$(distro)" in
-  macos)
-    install_macos
-    ;;
-  debian)
-    install_deb
-    ;;
-  fedora | opensuse)
-    install_rpm
-    ;;
-  arch)
-    install_aur
-    ;;
-  *)
-    echoh "Unsupported package manager."
-    install_standalone
-    ;;
+    macos)
+      install_macos
+      ;;
+    debian)
+      install_deb
+      ;;
+    fedora | opensuse)
+      install_rpm
+      ;;
+    arch)
+      install_aur
+      ;;
+    *)
+      echoh "Unsupported package manager."
+      install_standalone
+      ;;
   esac
 }
 
 parse_arg() {
   case "$1" in
-  *=*)
-    # Remove everything after first equal sign.
-    opt="${1%%=*}"
-    # Remove everything before first equal sign.
-    optarg="${1#*=}"
-    if [ ! "$optarg" ] && [ ! "${OPTIONAL-}" ]; then
-      echoerr "$opt requires an argument"
-      echoerr "Run with --help to see usage."
-      exit 1
-    fi
-    echo "$optarg"
-    return
-    ;;
+    *=*)
+      # Remove everything after first equal sign.
+      opt="${1%%=*}"
+      # Remove everything before first equal sign.
+      optarg="${1#*=}"
+      if [ ! "$optarg" ] && [ ! "${OPTIONAL-}" ]; then
+        echoerr "$opt requires an argument"
+        echoerr "Run with --help to see usage."
+        exit 1
+      fi
+      echo "$optarg"
+      return
+      ;;
   esac
 
   case "${2-}" in
-  "" | -*)
-    if [ ! "${OPTIONAL-}" ]; then
-      echoerr "$1 requires an argument"
-      echoerr "Run with --help to see usage."
-      exit 1
-    fi
-    ;;
-  *)
-    echo "$2"
-    return
-    ;;
+    "" | -*)
+      if [ ! "${OPTIONAL-}" ]; then
+        echoerr "$1 requires an argument"
+        echoerr "Run with --help to see usage."
+        exit 1
+      fi
+      ;;
+    *)
+      echo "$2"
+      return
+      ;;
   esac
 }
 
@@ -419,21 +430,21 @@ install_npm() {
   echoh
   echoerr "Please install npm or yarn to install code-server!"
   echoerr "You will need at least node v12 and a few C dependencies."
-  echoerr "See the docs https://github.com/cdr/code-server/blob/v3.9.2/docs/install.md#yarn-npm"
+  echoerr "See the docs https://coder.com/docs/code-server/v3.10.2/install#yarn-npm"
   exit 1
 }
 
 os() {
   case "$(uname)" in
-  Linux)
-    echo linux
-    ;;
-  Darwin)
-    echo macos
-    ;;
-  FreeBSD)
-    echo freebsd
-    ;;
+    Linux)
+      echo linux
+      ;;
+    Darwin)
+      echo macos
+      ;;
+    FreeBSD)
+      echo freebsd
+      ;;
   esac
 }
 
@@ -496,20 +507,20 @@ distro_name() {
 
 arch() {
   case "$(uname -m)" in
-  aarch64)
-    echo arm64
-    ;;
-  x86_64)
-    echo amd64
-    ;;
-  amd64) # FreeBSD.
-    echo amd64
-    ;;
+    aarch64)
+      echo arm64
+      ;;
+    x86_64)
+      echo amd64
+      ;;
+    amd64) # FreeBSD.
+      echo amd64
+      ;;
   esac
 }
 
 command_exists() {
-  command -v "$@" >/dev/null
+  command -v "$@" > /dev/null
 }
 
 sh_c() {
@@ -571,7 +582,7 @@ prefix() {
   fifo="$(mktemp -d)/fifo"
   mkfifo "$fifo"
   sed -e "s#^#$PREFIX: #" "$fifo" &
-  "$@" >"$fifo" 2>&1
+  "$@" > "$fifo" 2>&1
 }
 
 main "$@"

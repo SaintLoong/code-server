@@ -1,34 +1,43 @@
-// This setup runs before our e2e tests
-// so that it authenticates us into code-server
-// ensuring that we're logged in before we run any tests
-import { chromium } from "playwright"
-import { CODE_SERVER_ADDRESS, PASSWORD } from "./constants"
+import { Cookie } from "playwright"
+import { hash } from "../../src/node/util"
+import { PASSWORD, workspaceDir } from "./constants"
+import { clean } from "./helpers"
 import * as wtfnode from "./wtfnode"
 
-module.exports = async () => {
-  console.log("\n🚨 Running Global Setup for Jest End-to-End Tests")
-  console.log("     Please hang tight...")
-  const browser = await chromium.launch()
-  const context = await browser.newContext()
-  const page = await context.newPage()
+/**
+ * Perform workspace cleanup and authenticate. This should be set up to run
+ * before our tests execute.
+ */
+export default async function () {
+  console.log("\n🚨 Running Global Setup for Playwright End-to-End Tests")
+  console.log("   Please hang tight...")
+
+  // Cleanup workspaces from previous tests.
+  await clean(workspaceDir)
 
   if (process.env.WTF_NODE) {
     wtfnode.setup()
   }
 
-  await page.goto(CODE_SERVER_ADDRESS, { waitUntil: "domcontentloaded" })
-  // Type in password
-  await page.fill(".password", PASSWORD)
-  // Click the submit button and login
-  await page.click(".submit")
+  // TODO: Replace this with a call to code-server to get the cookie. To avoid
+  // too much overhead we can do an http POST request and avoid spawning a
+  // browser for it.
+  const cookies: Cookie[] = [
+    {
+      domain: "localhost",
+      expires: -1,
+      httpOnly: false,
+      name: "key",
+      path: "/",
+      sameSite: "Lax",
+      secure: false,
+      value: await hash(PASSWORD),
+    },
+  ]
 
   // Save storage state and store as an env variable
-  // More info: https://playwright.dev/docs/auth?_highlight=authe#reuse-authentication-state
-  const storage = await context.storageState()
-  process.env.STORAGE = JSON.stringify(storage)
+  // More info: https://playwright.dev/docs/auth/#reuse-authentication-state
+  process.env.STORAGE = JSON.stringify({ cookies })
 
-  await page.close()
-  await browser.close()
-  await context.close()
-  console.log("✅ Global Setup for Jest End-to-End Tests is now complete.")
+  console.log("✅ Global Setup for Playwright End-to-End Tests is now complete.")
 }

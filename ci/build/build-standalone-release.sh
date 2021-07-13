@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This is due to an upstream issue with RHEL7/CentOS 7 comptability with node-argon2
+# See: https://github.com/cdr/code-server/pull/3422#pullrequestreview-677765057
+export npm_config_build_from_source=true
+
 main() {
   cd "$(dirname "${0}")/../.."
   source ./ci/lib.sh
@@ -12,7 +16,7 @@ main() {
   # we use the same version it's using so we instead run a script with yarn that
   # will print the path to node.
   local node_path
-  node_path="$(yarn -s node <<<'console.info(process.execPath)')"
+  node_path="$(yarn -s node <<< 'console.info(process.execPath)')"
 
   mkdir -p "$RELEASE_PATH/bin"
   rsync ./ci/build/code-server.sh "$RELEASE_PATH/bin/code-server"

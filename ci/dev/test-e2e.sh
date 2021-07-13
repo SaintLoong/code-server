@@ -3,19 +3,35 @@ set -euo pipefail
 
 main() {
   cd "$(dirname "$0")/../.."
-  # We must keep jest in a sub-directory. See ../../test/package.json for more
-  # information. We must also run it from the root otherwise coverage will not
-  # include our source files.
-  if [[ -z ${PASSWORD-} ]] || [[ -z ${CODE_SERVER_ADDRESS-} ]]; then
-    echo "The end-to-end testing suites rely on your local environment"
-    echo -e "\n"
-    echo "Please set the following environment variables locally:"
-    echo "  \$PASSWORD"
-    echo "  \$CODE_SERVER_ADDRESS"
-    echo -e "\n"
+  source ./ci/lib.sh
+
+  local dir="$PWD"
+  if [[ ! ${CODE_SERVER_TEST_ENTRY-} ]]; then
+    echo "Set CODE_SERVER_TEST_ENTRY to test another build of code-server"
+  else
+    pushd "$CODE_SERVER_TEST_ENTRY"
+    dir="$PWD"
+    popd
+  fi
+
+  echo "Testing build in '$dir'"
+
+  # Simple sanity checks to see that we've built. There could still be things
+  # wrong (native modules version issues, incomplete build, etc).
+  if [[ ! -d $dir/out ]]; then
+    echo >&2 "No code-server build detected"
+    echo >&2 "You can build it with 'yarn build' or 'yarn watch'"
     exit 1
   fi
-  CS_DISABLE_PLUGINS=true ./test/node_modules/.bin/jest "$@" --config ./test/jest.e2e.config.ts
+
+  if [[ ! -d $dir/lib/vscode/out ]]; then
+    echo >&2 "No VS Code build detected"
+    echo >&2 "You can build it with 'yarn build:vscode' or 'yarn watch'"
+    exit 1
+  fi
+
+  cd test
+  yarn playwright test "$@"
 }
 
 main "$@"
